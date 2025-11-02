@@ -1,0 +1,2 @@
+../Core/Src/xtea.c:4:6:xtea_enc	16	static
+../Core/Src/xtea.c:14:6:xtea_dec	12	static

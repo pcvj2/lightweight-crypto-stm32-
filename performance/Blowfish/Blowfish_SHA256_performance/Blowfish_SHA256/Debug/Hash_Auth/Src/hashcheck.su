@@ -1,0 +1,3 @@
+../Hash_Auth/Src/hashcheck.c:40:9:STM32_SHA256_HASH_DigestCompute	144	static
+../Hash_Auth/Src/hashcheck.c:73:6:Fatal_Error_Handler	8	static
+../Hash_Auth/Src/hashcheck.c:86:6:FW_Hash_Verify	192	static

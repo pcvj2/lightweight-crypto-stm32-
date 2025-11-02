@@ -1,0 +1,3 @@
+../Core/Src/blowfish.c:349:6:Blowfish_Encrypt	1
+../Core/Src/blowfish.c:379:6:Blowfish_Decrypt	1
+../Core/Src/blowfish.c:411:6:Blowfish_Init	9
