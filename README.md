@@ -1,38 +1,24 @@
 # WSC332 – Cyber-security for Embedded Systems
-## Coursework: Lightweight Cryptography on STM32F767
+## Lightweight Cryptography on STM32F767ZI
 
-**Module:** WSC332 – Cyber-security for Embedded Systems  
-**Institution:** Loughborough University  
-**Target Hardware:** STM32F767 (NUCLEO-F767ZI)  
-**Language:** C  
-**Toolchain:** STM32CubeIDE / ARM GCC
+**Target Hardware:** STM32F767ZI (NUCLEO-F767ZI)  
+**Language:** C (STM32 firmware) + Python (ground station)  
+**Toolchain:** STM32CubeIDE / ARM GCC  
+**UART Baud Rate:** 115200
 
 ---
 
 ## Overview
 
-This coursework applies embedded security countermeasures to a simulated police surveillance drone (UAS) scenario. The STM32F767 board acts as the drone's compute board, communicating with a ground station (GS) over UART. Security is implemented across three progressive levels, covering symmetric encryption, firmware integrity via hashing, and digital signature verification.
+This project implements and evaluates lightweight cryptographic security countermeasures on the STM32F767ZI microcontroller, framed around a simulated police surveillance drone (UAS) scenario. The STM32 board acts as the drone's compute board, communicating encrypted data to a host PC acting as the ground station over UART. A Python script running on the ground station receives and decrypts all transmitted data using a shared Blowfish DLL compiled from the same C source used on-board.
 
-The project is split into two parts:
+Security is implemented across three progressive levels:
 
-| Part | Description | Weight |
-|------|-------------|--------|
-| Part 1 | Deployment and performance assessment of cryptography algorithms | 55% |
-| Part 2 | Mission validation (Security Level 3 + drone mission phases) | 25% |
-| Report | Written report (up to 10 pages, PDF) | 20% |
-
----
-
-## Security Levels
-
-**Level 1 — Confidentiality & Data Integrity**  
-Deploy XTEA and Blowfish symmetric encryption algorithms and benchmark them against AES. Performance metrics (execution time, memory footprint) are collected under `-O0` and `-O3` compiler optimisation flags.
-
-**Level 2 — Firmware Integrity**  
-SHA-256 is used to compute a hash of the firmware binary, which is appended to detect firmware corruption at boot. The performance overhead of adding SHA-256 to both XTEA and Blowfish configurations is measured.
-
-**Level 3 — Firmware Signature & Protected Storage**  
-A digital signature (RSA-2048 or ECDSA-256) is generated for the firmware binary. The public key is embedded in the firmware and stored in a write-protected Flash sector. On boot, the firmware hash is re-computed and verified against the stored signature before execution is permitted.
+| Level | Description |
+|-------|-------------|
+| 1 | Symmetric encryption (XTEA & Blowfish) for confidentiality and data integrity |
+| 2 | SHA-256 firmware hash verification for secure boot |
+| 3 | ECDSA digital signature generation and verification (attempted) |
 
 ---
 
@@ -40,62 +26,84 @@ A digital signature (RSA-2048 or ECDSA-256) is generated for the firmware binary
 
 ```
 lightweight-crypto-stm32-/
-├── performance/        # Part 1: XTEA, Blowfish, AES, SHA256 STM32CubeIDE projects
-│   ├── xtea/           #   - algorithm source, Makefile, READFILE.txt
-│   ├── blowfish/
-│   ├── xtea_sha256/
-│   └── blowfish_sha256/
-├── case_study/         # Part 2: Mission case study implementation
-│   ├── src/            #   - drone mission phases (identification, encryption, signature)
-│   ├── Makefile
+├── performance/            # Part 1: benchmarking projects
+│   ├── xtea/               #   XTEA implementation + Makefile + READFILE.txt
+│   ├── blowfish/           #   Blowfish implementation + Makefile + READFILE.txt
+│   ├── xtea_sha256/        #   XTEA + SHA-256 firmware integrity
+│   └── blowfish_sha256/    #   Blowfish + SHA-256 firmware integrity
+├── case_study/             # Part 2: full drone mission implementation
+│   ├── src/                #   STM32 firmware (encryption, UID, RNG, UART TX)
+│   ├── ground_station.py   #   Python GS receiver and Blowfish decryption
+│   ├── blowfish.dll        #   Compiled Blowfish DLL (MSYS2 / Windows)
 │   └── READFILE.txt
-├── results_report/     # Spreadsheet of experimental results + written report (PDF)
-├── presentation/       # Coursework presentation slides (.pptx / PDF)
-├── video/              # Demo video recording (if submitted)
-└── beakman_challenge/  # Bonus challenge: INS attitude data encrypted with XTEA/Blowfish
+├── results_report/         # Experimental results spreadsheet + written report (PDF)
+├── presentation/           # Coursework slides (.pptx / PDF)
+├── video/                  # Demo video
+└── beakman_challenge/      # Bonus: real-time encrypted telemetry stream
 ```
 
 ---
 
 ## Part 1: Performance Benchmarking
 
-All four algorithm configurations were benchmarked on the STM32F767 with the following metrics:
+All configurations were benchmarked on the STM32F767ZI. Execution time was measured over 100 iterations using the TIM11 hardware timer. Memory utilisation was read from the STM32CubeIDE build outputs.
 
-| Model | Compilation Flag | Av. Execution Time | Memory Utilisation |
-|-------|-----------------|--------------------|--------------------|
-| XTEA | -O0 | | |
-| XTEA | -O3 | | |
-| Blowfish | -O0 | | |
-| Blowfish | -O3 | | |
-| XTEA + SHA256 | -O0 | | |
-| XTEA + SHA256 | -O3 | | |
-| Blowfish + SHA256 | -O0 | | |
-| Blowfish + SHA256 | -O3 | | |
+| Model | Flag | Avg. Execution Time (µs) | Flash (KB) | RAM (KB) |
+|-------|------|--------------------------|------------|----------|
+| XTEA | -O0 | 77.46 | 28.82 | 2.58 |
+| XTEA | -O3 | 27.52 | 23.63 | 2.58 |
+| Blowfish | -O0 | 30.72 | 33.66 | 6.69 |
+| Blowfish | -O3 | 5.42 | 32.01 | 6.69 |
+| XTEA + SHA256 | -O0 | 147.50 | 34.83 | 2.75 |
+| XTEA + SHA256 | -O3 | 96.11 | 29.66 | 2.75 |
+| Blowfish + SHA256 | -O0 | 176.76 | 39.49 | 2.75 |
+| Blowfish + SHA256 | -O3 | 89.78 | 37.83 | 2.75 |
 
-> Full results are in [`results_report/`](results_report/).
-
-**Algorithm references:**
-- XTEA: Needham & Wheeler, "Tea extensions," University of Cambridge, 1997
-- Blowfish: https://github.com/pcvj2/blowfish/blob/master/blowfish.c
-
----
-
-## Part 2: Drone Mission Phases
-
-The case study simulates a police drone performing a traffic surveillance mission. Communication between the STM32F767 (drone) and a host PC (ground station) is over UART/serial.
-
-The four mission phases are:
-
-1. **Security Level 3 verification** — firmware signature is checked at startup; execution halts if verification fails
-2. **Drone identification** — the ground station requests the board's unique ID; the drone encrypts and transmits it using XTEA or Blowfish
-3. **Car plate identification** — the on-board RNG generates a 6-digit car plate number; it is encrypted and sent to the GS, which decrypts and displays it
-4. **Secret message** — the drone transmits the hex string `416D617A696E67204F7374205C6F2F20`, which the GS decrypts and converts to a readable string
+Key findings:
+- **Blowfish** consistently outperformed XTEA in raw execution speed (5.42 µs at -O3), though at a higher RAM cost (6.69 KB vs 2.58 KB)
+- **XTEA** is the better choice for memory-constrained deployments
+- **Compiler optimisation** had the largest impact on Blowfish, yielding a 5.6× speedup
+- **SHA-256** added significant runtime overhead (~1.7× slowdown) and should be applied selectively (e.g. boot-time only)
 
 ---
 
-## Beakman Challenge (Bonus — up to 10 marks)
+## Part 2: Drone Mission Case Study
 
-An Inertial Navigation System (INS) outputs attitude data (roll φ, pitch θ, yaw ψ) from gyroscope, accelerometer, and magnetometer sensors. This data is encrypted on-board using XTEA, transmitted to a host PC, and decrypted using XTEA or Blowfish on the receiving end.
+The case study simulates a complete drone-to-ground-station encrypted communication pipeline. All encryption is performed on the STM32F767ZI using **Blowfish with a 128-bit key**; decryption is handled by a Python script on the host PC using a Blowfish DLL compiled from the same C source (`blowfish.c / blowfish.h`) to guarantee identical behaviour.
+
+### Mission Phases
+
+**Phase 1 — Secure Boot (SHA-256 firmware integrity)**  
+At startup, `FW_Hash_Verify()` from X-CUBE-CRYPTOLIB recomputes the firmware hash and compares it against a reference digest stored in Flash (embedded via `PostBuild_hash.bat`). Execution halts on mismatch.
+
+**Phase 2 — Drone Identification (Encrypted UID)**  
+The board's factory-programmed 96-bit unique ID is read via `HAL_GetUIDw0/1/2()`, split into two 64-bit blocks, and encrypted with Blowfish before transmission over UART.
+
+**Phase 3 — Car Plate Identification (RNG + Encryption)**  
+The STM32's hardware RNG generates a 6-digit number plate. It is encrypted with Blowfish and transmitted; the ground station decrypts and logs the plain plate.
+
+**Phase 4 — Secret Message**  
+The drone encrypts and transmits a 16-byte payload which decrypts to `"Amazing Ost \o/"`, verifying end-to-end correctness of the encrypted pipeline.
+
+### Ground Station Setup
+
+The Python ground station opens a serial connection via `pyserial`, receives encrypted 64-bit blocks, and decrypts them using `blowfish.dll` loaded via `ctypes`. The DLL was compiled from the same `blowfish.c` used on the STM32 using MSYS2:
+
+```bash
+gcc -shared -o blowfish.dll -DBUILD_DLL -fPIC blowfish.c
+```
+
+---
+
+## ECDSA Signature Verification (Attempted — Level 3)
+
+An ECDSA P-256 keypair was generated using OpenSSL. The private key was used to sign the SHA-256 firmware digest (`firmware.sig`), with the public key intended to be embedded in Flash for on-boot verification via X-CUBE-CRYPTOLIB. Key generation and signing succeeded; however, middleware incompatibilities on the STM32F7 platform prevented full integration. The final implementation uses SHA-256 integrity verification only.
+
+---
+
+## Beakman Challenge (Bonus)
+
+A real-time encrypted telemetry stream was implemented to simulate continuous drone flight data. Every second, the STM32 generates and Blowfish-encrypts simulated sensor data — roll, pitch, yaw, latitude/longitude, altitude, battery level, and scanned plate numbers — and transmits it over UART. The Python ground station decrypts and plots altitude, battery, and yaw in real-time using Matplotlib. A descent sequence is triggered automatically when battery reaches 10%.
 
 ---
 
@@ -103,7 +111,7 @@ An Inertial Navigation System (INS) outputs attitude data (roll φ, pitch θ, ya
 
 https://github.com/pcvj2/lightweight-crypto-stm32-/raw/main/video/demo.mp4
 
-> If the video doesn't play inline, you can find it in the [`video/`](video/) folder.
+> If the video doesn't play inline, it can be found in the [`video/`](video/) folder.
 
 ---
 
@@ -111,24 +119,29 @@ https://github.com/pcvj2/lightweight-crypto-stm32-/raw/main/video/demo.mp4
 
 ### Prerequisites
 
-- STM32CubeIDE (or ARM GCC + `arm-none-eabi` toolchain)
+- STM32CubeIDE
 - ST-LINK V2/V3 programmer
-- Serial terminal (e.g. PuTTY, TeraTerm) — default baud rate: **115200**
+- Python 3 with `pyserial` and `matplotlib` (`pip install pyserial matplotlib`)
+- Serial terminal for raw monitoring (e.g. PuTTY) — baud rate **115200**
+- MSYS2 (Windows) if recompiling `blowfish.dll`
 
-### Build & Flash (STM32CubeIDE)
+### Flash the STM32 Firmware
 
-1. Open STM32CubeIDE and import the relevant project from `performance/` or `case_study/`
-2. Select the desired build configuration (`Debug` for `-O0`, `Release` for `-O3`)
+1. Open STM32CubeIDE and import the project from `performance/` or `case_study/`
+2. Select `Debug` (-O0) or `Release` (-O3) build configuration
 3. Build: **Project → Build Project**
-4. Flash: **Run → Run** (or use the ST-LINK debug interface)
+4. Flash: **Run → Run**
 
-### Build (Makefile / Command Line)
+For SHA-256 projects, run `PostBuild_hash.bat` after building to embed the firmware hash, then re-flash using STM32CubeProgrammer.
+
+### Run the Ground Station
 
 ```bash
-cd performance/xtea/
-make          # builds with default flags
-make O3=1     # builds with -O3 optimisation
-make flash    # flashes via OpenOCD (if configured)
+cd case_study/
+python ground_station.py   # update COM port in script as needed
 ```
 
-See the `READFILE.txt` in each subfolder for algorithm-specific build and run instructions.
+### Algorithm references
+
+- XTEA: R. M. Needham & D. J. Wheeler, "Tea extensions," University of Cambridge, 1997
+- Blowfish: https://github.com/Rupan/blowfish/blob/master/blowfish.c
