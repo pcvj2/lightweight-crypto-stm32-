@@ -76,7 +76,7 @@ All four algorithm configurations were benchmarked on the STM32F767 with the fol
 
 **Algorithm references:**
 - XTEA: Needham & Wheeler, "Tea extensions," University of Cambridge, 1997
-- Blowfish: https://github.com/Rupan/blowfish/blob/master/blowfish.c
+- Blowfish: https://github.com/pcvj2/blowfish/blob/master/blowfish.c
 
 ---
 
