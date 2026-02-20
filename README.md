@@ -109,7 +109,7 @@ A real-time encrypted telemetry stream was implemented to simulate continuous dr
 
 ## Demo
 
-https://github.com/pcvj2/lightweight-crypto-stm32-/raw/main/video/demo.mp4
+https://github.com/pcvj2/lightweight-crypto-stm32-/raw/main/video/F130812_Cybersecurity_CW_Video.mp4
 
 > If the video doesn't play inline, it can be found in the [`video/`](video/) folder.
 
@@ -140,8 +140,3 @@ For SHA-256 projects, run `PostBuild_hash.bat` after building to embed the firmw
 cd case_study/
 python ground_station.py   # update COM port in script as needed
 ```
-
-### Algorithm references
-
-- XTEA: R. M. Needham & D. J. Wheeler, "Tea extensions," University of Cambridge, 1997
-- Blowfish: https://github.com/Rupan/blowfish/blob/master/blowfish.c
